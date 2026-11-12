@@ -1,0 +1,598 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cazador de Fraudes</title>
+
+<!-- Librerías para QR y PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg,#142b50,#2875a8);
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.contenedor {
+    background: white;
+    width: 100%;
+    max-width: 650px;
+    padding: 30px;
+    border-radius: 18px;
+    text-align: center;
+    box-shadow: 0 8px 25px #0004;
+}
+
+h1 { color: #18375d; }
+
+.caso {
+    background: #f1f5fa;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.tipo { color: #2875a8; font-weight: bold; }
+.mensaje { font-size: 18px; line-height: 1.5; }
+
+.progreso {
+    height: 12px;
+    background: #ddd;
+    border-radius: 20px;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+#barra {
+    height: 100%;
+    width: 0%;
+    background: #2196f3;
+    transition: .3s;
+}
+
+button {
+    border: none;
+    padding: 13px 22px;
+    margin: 7px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+.real { background: #219653; }
+.falso { background: #e53935; }
+.siguiente { background: #18375d; }
+
+#explicacion {
+    display: none;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: left;
+    line-height: 1.5;
+}
+
+.correcto { background: #d9f5e2; color: #176534; }
+.incorrecto { background: #ffe1e1; color: #a32121; }
+
+#final, #certificado { display: none; }
+
+input {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #aaa;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-size: 16px;
+}
+
+#qr {
+    display: flex;
+    justify-content: center;
+    margin: 25px auto;
+    padding: 15px;
+    width: fit-content;
+    background: white;
+    border: 1px solid #ddd;
+}
+
+#qr img { display: block; }
+
+.instruccion {
+    background: #eaf3ff;
+    padding: 15px;
+    border-radius: 10px;
+    color: #18375d;
+    line-height: 1.5;
+}
+
+.certificado {
+    border: 8px double #d4a72c;
+    padding: 35px 20px;
+    background: #fffdf3;
+    margin: 20px 0;
+}
+
+.certificado h2 { color: #bd8914; }
+.certificado h1 { color: #18375d; }
+.certificado h3 { font-size: 28px; color: #18375d; }
+
+#mensajeFinal { color: #444; }
+
+</style>
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <!-- JUEGO -->
+    <div id="juego">
+
+        <h1>🕵️ ¿REAL O FALSO?</h1>
+        <p>¡Demuestra que puedes reconocer los fraudes digitales!</p>
+
+        <div class="progreso">
+            <div id="barra"></div>
+        </div>
+
+        <p id="contador">Caso 1 de 10 | Puntaje: 0</p>
+
+        <div class="caso">
+            <p class="tipo" id="tipo"></p>
+            <p class="mensaje" id="mensaje"></p>
+        </div>
+
+        <h3>¿Qué opinas de este caso?</h3>
+
+        <button class="real" id="btnReal"
+            onclick="responder(true)">✅ REAL</button>
+
+        <button class="falso" id="btnFalso"
+            onclick="responder(false)">❌ FALSO</button>
+
+        <div id="explicacion"></div>
+
+        <button class="siguiente" id="btnSiguiente"
+            onclick="siguiente()" style="display:none">
+            Siguiente caso ➜
+        </button>
+
+    </div>
+
+    <!-- RESULTADO Y QR -->
+    <div id="final">
+
+        <h1>🏆 ¡FELICIDADES!</h1>
+
+        <h2 id="resultado"></h2>
+        <p id="mensajeFinal"></p>
+
+        <input type="text" id="nombre"
+            placeholder="Escribe tu nombre completo">
+
+        <button class="siguiente" onclick="generarQR()">
+            🎓 GENERAR MI DIPLOMA QR
+        </button>
+
+        <div id="zonaQR" style="display:none">
+
+            <h2>🏅 Tu diploma está listo</h2>
+
+            <p>Escanea este código QR con tu celular para abrir tu diploma individual.</p>
+
+            <div id="qr"></div>
+
+            <div class="instruccion">
+                📱 <b>Instrucciones:</b><br>
+                1. Abre la cámara de tu celular.<br>
+                2. Escanea el código QR.<br>
+                3. Abre el enlace que aparece.<br>
+                4. Descarga tu diploma en PDF.
+            </div>
+
+            <button class="siguiente" onclick="descargarPDF()">
+                📥 Descargar diploma PDF
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- DIPLOMA ABIERTO DESDE EL QR -->
+    <div id="certificado">
+
+        <div class="certificado">
+
+            <h2>🏅 DIPLOMA DE RECONOCIMIENTO</h2>
+
+            <p>Se otorga el presente reconocimiento a:</p>
+
+            <h3 id="nombreCertificado"></h3>
+
+            <p>
+                Por completar el desafío de seguridad digital
+                y demostrar sus conocimientos para identificar
+                posibles fraudes en internet.
+            </p>
+
+            <h1>🕵️ CAZADOR DE FRAUDES</h1>
+
+            <h2 id="puntajeCertificado"></h2>
+
+            <p id="fechaCertificado"></p>
+
+            <p>¡Piensa antes de hacer clic!</p>
+
+        </div>
+
+        <button class="siguiente" onclick="descargarPDF()">
+            📥 DESCARGAR MI DIPLOMA
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+// LOS 10 CASOS
+
+const casos = [
+
+{
+tipo:"📧 CORREO ELECTRÓNICO",
+mensaje:"Tu banco te envía un correo desde su dirección oficial y te recomienda ingresar directamente a su aplicación para revisar una actualización.",
+real:true,
+explicacion:"Puede ser legítimo si verificas el remitente. Siempre accede directamente a la aplicación oficial."
+},
+
+{
+tipo:"📱 WHATSAPP",
+mensaje:"¡GANASTE UN CELULAR! Para recibirlo debes enviar tu número de tarjeta bancaria y contraseña.",
+real:false,
+explicacion:"Es un fraude. Nunca compartas contraseñas ni datos bancarios."
+},
+
+{
+tipo:"📰 NOTICIA",
+mensaje:"Una noticia anuncia que mañana habrá clases normales y aparece publicada en los canales oficiales de la institución.",
+real:true,
+explicacion:"Es información que puede ser verdadera si se confirma en los canales oficiales."
+},
+
+{
+tipo:"📧 CORREO ELECTRÓNICO",
+mensaje:"Tu cuenta será eliminada en 10 minutos. Ingresa inmediatamente en este enlace para evitarlo.",
+real:false,
+explicacion:"Es una señal de phishing. Los delincuentes utilizan amenazas y urgencia."
+},
+
+{
+tipo:"📱 WHATSAPP",
+mensaje:"Un compañero te envía un archivo desconocido llamado Premios2026.apk y te pide instalarlo.",
+real:false,
+explicacion:"Los archivos desconocidos pueden contener programas maliciosos."
+},
+
+{
+tipo:"📰 NOTICIA",
+mensaje:"Encuentras una noticia impactante sin autor, fecha ni fuentes verificables que te pide compartirla.",
+real:false,
+explicacion:"No debes compartir información sin verificar su origen."
+},
+
+{
+tipo:"📧 CORREO ELECTRÓNICO",
+mensaje:"Tu profesor envía desde su correo institucional una actividad y te indica que puedes consultarla en la plataforma educativa habitual.",
+real:true,
+explicacion:"Puede ser legítima si verificas la dirección del docente y la plataforma."
+},
+
+{
+tipo:"📱 WHATSAPP",
+mensaje:"Un desconocido se hace pasar por un familiar y solicita una transferencia urgente de dinero.",
+real:false,
+explicacion:"Puede ser suplantación de identidad. Confirma por otro medio."
+},
+
+{
+tipo:"📰 NOTICIA",
+mensaje:"Una noticia científica aparece en medios reconocidos, tiene autor, fecha y enlaces a fuentes oficiales.",
+real:true,
+explicacion:"Tiene características de información verificable. Contrasta siempre las fuentes."
+},
+
+{
+tipo:"📱 WHATSAPP",
+mensaje:"Un desconocido envía un enlace para consultar una supuesta multa y solicita tus datos bancarios.",
+real:false,
+explicacion:"Es una posible estafa. Consulta directamente los canales oficiales."
+}
+
+];
+
+let actual = 0;
+let puntaje = 0;
+let contestado = false;
+let datosDiploma = null;
+
+function mostrarCaso() {
+
+    let caso = casos[actual];
+
+    document.getElementById("tipo").textContent = caso.tipo;
+    document.getElementById("mensaje").textContent = caso.mensaje;
+
+    document.getElementById("contador").textContent =
+        `Caso ${actual+1} de 10 | Puntaje: ${puntaje}`;
+
+    document.getElementById("barra").style.width =
+        (actual / 10 * 100) + "%";
+
+    document.getElementById("explicacion").style.display = "none";
+    document.getElementById("btnSiguiente").style.display = "none";
+
+    document.getElementById("btnReal").disabled = false;
+    document.getElementById("btnFalso").disabled = false;
+
+    contestado = false;
+}
+
+function responder(respuesta) {
+
+    if (contestado) return;
+
+    contestado = true;
+
+    let caso = casos[actual];
+    let correcta = respuesta === caso.real;
+
+    let explicacion = document.getElementById("explicacion");
+
+    if (correcta) {
+        puntaje += 10;
+        explicacion.className = "correcto";
+        explicacion.innerHTML = "✅ ¡CORRECTO!<br>" + caso.explicacion;
+    } else {
+        explicacion.className = "incorrecto";
+        explicacion.innerHTML =
+            "❌ ¡INCORRECTO! La respuesta correcta era " +
+            (caso.real ? "REAL" : "FALSO") +
+            "<br>" + caso.explicacion;
+    }
+
+    explicacion.style.display = "block";
+
+    document.getElementById("btnReal").disabled = true;
+    document.getElementById("btnFalso").disabled = true;
+
+    document.getElementById("contador").textContent =
+        `Caso ${actual+1} de 10 | Puntaje: ${puntaje}`;
+
+    let siguiente = document.getElementById("btnSiguiente");
+    siguiente.style.display = "inline-block";
+
+    if (actual === 9) {
+        siguiente.textContent = "Ver mi resultado 🏆";
+    }
+}
+
+function siguiente() {
+
+    actual++;
+
+    if (actual < 10) {
+        mostrarCaso();
+    } else {
+        finalizar();
+    }
+}
+
+function finalizar() {
+
+    document.getElementById("juego").style.display = "none";
+    document.getElementById("final").style.display = "block";
+
+    document.getElementById("resultado").textContent =
+        "Tu puntaje: " + puntaje + " / 100";
+
+    let mensaje = puntaje === 100
+        ? "¡Excelente! Eres un experto en detectar fraudes."
+        : puntaje >= 70
+        ? "¡Muy bien! Tienes buenos conocimientos de seguridad digital."
+        : puntaje >= 50
+        ? "¡Buen intento! Sigue aprendiendo."
+        : "Continúa practicando para protegerte en internet.";
+
+    document.getElementById("mensajeFinal").textContent = mensaje;
+}
+
+// GENERAR QR PERSONALIZADO
+
+function generarQR() {
+
+    let nombre = document.getElementById("nombre").value.trim();
+
+    if (!nombre) {
+        alert("Por favor, escribe tu nombre completo.");
+        return;
+    }
+
+    // El juego debe estar publicado en una dirección web.
+    if (location.protocol === "file:") {
+        alert("Primero debes publicar el juego en internet para que el QR funcione en otros celulares.");
+        return;
+    }
+
+    datosDiploma = {
+        nombre: nombre,
+        puntaje: puntaje,
+        fecha: new Date().toLocaleDateString("es-EC")
+    };
+
+    let datos = btoa(unescape(encodeURIComponent(
+        JSON.stringify(datosDiploma)
+    )));
+
+    let enlace = location.origin + location.pathname +
+        "?diploma=" + encodeURIComponent(datos);
+
+    document.getElementById("zonaQR").style.display = "block";
+    document.getElementById("qr").innerHTML = "";
+
+    new QRCode(document.getElementById("qr"), {
+        text: enlace,
+        width: 220,
+        height: 220,
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+}
+
+// ABRIR DIPLOMA DESDE EL QR
+
+function cargarDiplomaQR() {
+
+    const parametros = new URLSearchParams(location.search);
+    const codigo = parametros.get("diploma");
+
+    if (!codigo) return;
+
+    try {
+
+        datosDiploma = JSON.parse(
+            decodeURIComponent(escape(atob(codigo)))
+        );
+
+        if (
+            typeof datosDiploma.nombre !== "string" ||
+            typeof datosDiploma.puntaje !== "number" ||
+            !Number.isFinite(datosDiploma.puntaje) ||
+            datosDiploma.puntaje < 0 ||
+            datosDiploma.puntaje > 100 ||
+            typeof datosDiploma.fecha !== "string"
+        ) {
+            throw new Error("Datos inválidos");
+        }
+
+        document.getElementById("juego").style.display = "none";
+        document.getElementById("final").style.display = "none";
+        document.getElementById("certificado").style.display = "block";
+
+        document.getElementById("nombreCertificado").textContent =
+            datosDiploma.nombre;
+
+        document.getElementById("puntajeCertificado").textContent =
+            datosDiploma.puntaje + " / 100 PUNTOS";
+
+        document.getElementById("fechaCertificado").textContent =
+            "Fecha: " + datosDiploma.fecha;
+
+    } catch(error) {
+        alert("El código QR no contiene un diploma válido.");
+    }
+
+}
+
+// DESCARGAR PDF INDIVIDUAL
+
+function descargarPDF() {
+
+    if (!datosDiploma) return;
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4"
+    });
+
+    pdf.setDrawColor(190, 145, 35);
+    pdf.setLineWidth(3);
+    pdf.rect(8, 8, 281, 194);
+
+    pdf.setDrawColor(190, 145, 35);
+    pdf.setLineWidth(1);
+    pdf.rect(13, 13, 271, 184);
+
+    pdf.setTextColor(190, 145, 35);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(25);
+    pdf.text("DIPLOMA DE RECONOCIMIENTO", 148.5, 42, {
+        align: "center"
+    });
+
+    pdf.setTextColor(35, 59, 94);
+    pdf.setFontSize(17);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Se otorga el presente reconocimiento a:", 148.5, 70, {
+        align: "center"
+    });
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(29);
+    pdf.text(datosDiploma.nombre, 148.5, 91, {
+        align: "center",
+        maxWidth: 245
+    });
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(14);
+    pdf.text(
+        "Por completar el desafio de seguridad digital y demostrar",
+        148.5, 111, {align: "center"}
+    );
+    pdf.text(
+        "sus conocimientos para identificar posibles fraudes en internet.",
+        148.5, 119, {align: "center"}
+    );
+
+    pdf.setTextColor(190, 145, 35);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(25);
+    pdf.text("CAZADOR DE FRAUDES", 148.5, 145, {
+        align: "center"
+    });
+
+    pdf.setTextColor(35, 59, 94);
+    pdf.setFontSize(18);
+    pdf.text("Puntaje: " + datosDiploma.puntaje + " / 100",
+        148.5, 160, {align: "center"});
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(12);
+    pdf.text("Fecha: " + datosDiploma.fecha, 148.5, 177, {
+        align: "center"
+    });
+
+    let nombreArchivo = datosDiploma.nombre
+        .replace(/[^a-z0-9]/gi, "_");
+
+    pdf.save("Diploma_Cazador_de_Fraudes_" +
+        nombreArchivo + ".pdf");
+}
+
+// INICIO
+
+mostrarCaso();
+cargarDiplomaQR();
+
+</script>
+
+</body>
+</html>
